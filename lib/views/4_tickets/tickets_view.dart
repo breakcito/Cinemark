@@ -9,7 +9,8 @@ import '../../data/models/ticket_model.dart';
 import 'widgets/batch_coupon_section.dart';
 import 'widgets/purchase_bottom_bar.dart';
 import 'widgets/ticket_counter_tile.dart';
-import '../11_survey/sus_survey_view.dart';
+import '../5_seats/seats_view.dart';
+import '../../core/widgets/purchase_exit_dialog.dart';
 
 class TicketsView extends StatefulWidget {
   final Movie movie;
@@ -52,10 +53,29 @@ class _TicketsViewState extends State<TicketsView>
     final totalTickets = _session.totalTicketCount;
     final totalAmount = _session.calculateTotalAmount(_availableTicketTypes);
 
+    // Obtener desglose de tarifas seleccionadas y cupones canjeados
+    final selectedItems = <Map<String, dynamic>>[];
+    for (final ticket in _availableTicketTypes) {
+      final qty = _session.ticketQuantities[ticket.id] ?? 0;
+      if (qty > 0) {
+        selectedItems.add({
+          'name': ticket.name,
+          'qty': qty,
+          'price': ticket.price,
+          'subtotal': ticket.price * qty,
+        });
+      }
+    }
+    final voucherCount = _session.redeemedTickets.length;
+
     // Diálogo de confirmación del paso 4 hacia el paso 5 (Asientos)
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -89,18 +109,100 @@ class _TicketsViewState extends State<TicketsView>
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             Text(
               'Has seleccionado $totalTickets ${totalTickets == 1 ? 'entrada' : 'entradas'} para "${widget.movie.title}".',
-              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Total a pagar: S/ ${totalAmount.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+            const SizedBox(height: 12),
+            // Desglose de selección (Heurística Usabilidad #1 y #6)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final item in selectedItems)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${item['qty']}x ${item['name']}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'S/ ${(item['subtotal'] as double).toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (voucherCount > 0)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '$voucherCount x Cupón Canjeado (${_session.redeemedTickets.map((t) => t.parentBatchCode).toSet().join(", ")})',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ),
+                          const Text(
+                            'S/ 0.00',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const Divider(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Total a pagar:',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        'S/ ${totalAmount.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
@@ -124,43 +226,23 @@ class _TicketsViewState extends State<TicketsView>
               ),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                TelemetryTracker().finishSession(
-                  isCompleted: true,
-                  maxStepReached: 'Tickets',
-                );
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Paso 4 Completado con éxito. Listo para pantalla 5: Selección de Asientos.',
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SeatsView(
+                        movie: widget.movie,
+                        showtime: widget.showtime,
+                      ),
                     ),
-                    backgroundColor: AppColors.success,
-                    duration: Duration(seconds: 3),
-                  ),
-                );
-              },
-              child: const Text('CONTINUAR A ASIENTOS'),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.rate_review_outlined, color: AppColors.primary),
-              label: const Text('EVALUAR PROTOTIPO (ENCUESTA SUS)'),
-              onPressed: () {
-                TelemetryTracker().finishSession(
-                  isCompleted: true,
-                  maxStepReached: 'Tickets',
-                );
-                Navigator.pop(ctx);
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => SusSurveyView(
-                      sessionUuid: TelemetryTracker().sessionUuid,
-                    ),
-                  ),
-                );
-              },
+                  );
+                },
+                child: const Text('CONTINUAR A ASIENTOS'),
+              ),
             ),
           ],
         ),
@@ -177,79 +259,76 @@ class _TicketsViewState extends State<TicketsView>
         final totalAmount = _session.calculateTotalAmount(_availableTicketTypes);
         final totalTickets = _session.totalTicketCount;
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: AppColors.primary),
-              onPressed: () => Navigator.pop(context),
-            ),
-            titleSpacing: 0,
-            title: Text(
-              '${widget.movie.title} - ${cinema.name}',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+        Future<void> handleExit() async {
+          final shouldExit = await PurchaseExitDialog.show(context);
+          if (shouldExit && context.mounted) {
+            _session.resetSession();
+            Navigator.pop(context);
+          }
+        }
+
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) return;
+            await handleExit();
+          },
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+                tooltip: 'Regresar a horarios',
+                onPressed: handleExit,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            actions: [
-              // Temporizador activo visible con icono de salida (Heurística #1)
-              Container(
-                margin: const EdgeInsets.only(right: 12),
-                child: Row(
-                  children: [
-                    Text(
-                      _session.formattedTimeRemaining,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: _session.isTimerCritical
-                            ? AppColors.error
-                            : AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    IconButton(
-                      icon: const Icon(Icons.exit_to_app, color: AppColors.primary, size: 20),
-                      tooltip: 'Cancelar compra',
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            title: const Text('¿Cancelar compra?'),
-                            content: const Text(
-                              'Se liberarán tus entradas y volverás a la cartelera.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(ctx),
-                                child: const Text('Continuar comprando'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Navigator.pop(ctx);
-                                  _session.resetSession();
-                                  Navigator.popUntil(context, (route) => route.isFirst);
-                                },
-                                child: const Text('Salir'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+              titleSpacing: 0,
+              title: Text(
+                '${widget.movie.title} - ${cinema.name}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
-          body: Column(
-            children: [
+              actions: [
+                // Temporizador activo visible desde que eligió horario (Heurística #1)
+                Container(
+                  margin: const EdgeInsets.only(right: 12),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.timer_outlined,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _session.formattedTimeRemaining,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: _session.isTimerCritical
+                              ? AppColors.error
+                              : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                        tooltip: 'Cancelar compra y salir',
+                        onPressed: handleExit,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            body: Column(
+              children: [
               // Hero Session Banner
               Stack(
                 children: [
@@ -348,9 +427,10 @@ class _TicketsViewState extends State<TicketsView>
               ),
             ],
           ),
-        );
-      },
-    );
+        ),
+      );
+    },
+  );
   }
 
   Widget _buildTarifasTab() {

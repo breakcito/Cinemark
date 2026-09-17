@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/telemetry/telemetry_tracker.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/order_summary_bottom_sheet.dart';
 
 class PurchaseBottomBar extends StatelessWidget {
   final int totalTickets;
@@ -42,65 +43,106 @@ class PurchaseBottomBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Icono Carrito con Badge de cantidad
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(
-                    Icons.shopping_cart_outlined,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                  if (totalTickets > 0)
-                    Positioned(
-                      top: -6,
-                      right: -8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
+              // Área clickeable del Carrito para ver desglose de entradas elegidas (Heurística #6 y #7)
+              Expanded(
+                child: InkWell(
+                  onTap: () => OrderSummaryBottomSheet.show(context),
+                  borderRadius: BorderRadius.circular(20),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        // Icono Carrito con Badge de cantidad
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            const Icon(
+                              Icons.shopping_cart_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                            if (totalTickets > 0)
+                              Positioned(
+                                top: -6,
+                                right: -8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '$totalTickets',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '$totalTickets',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                        const SizedBox(width: 12),
+                        // Total acumulado y botón "Ver detalle"
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'S/ ${totalAmount.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.info_outline,
+                                    size: 13,
+                                    color: Colors.white70,
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      totalTickets == 0
+                                          ? '0 entradas seleccionadas'
+                                          : '$totalTickets ${totalTickets == 1 ? 'entrada' : 'entradas'}',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    '• Ver detalle',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(width: 14),
-              // Total acumulado
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'S/ ${totalAmount.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    Text(
-                      totalTickets == 0
-                          ? '0 entradas seleccionadas'
-                          : '$totalTickets ${totalTickets == 1 ? 'entrada' : 'entradas'}',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),

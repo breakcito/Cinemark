@@ -7,7 +7,8 @@ import '../../data/models/cinema_model.dart';
 import '../../data/models/movie_model.dart';
 import '../../data/models/purchase_session.dart';
 import '../3_showtimes/showtimes_view.dart';
-import '../11_survey/sus_survey_view.dart';
+import '../9_history/purchase_history_view.dart';
+import '../researcher/thesis_panel_view.dart';
 import 'widgets/cinema_selector_sheet.dart';
 import 'widgets/featured_movie_slider.dart';
 import 'widgets/home_header.dart';
@@ -138,13 +139,6 @@ class _HomeViewState extends State<HomeView> {
               child: HomeHeader(
                 selectedCinema: _currentCinema,
                 onSelectCinemaTap: _openCinemaSelector,
-                onSurveyTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const SusSurveyView(),
-                    ),
-                  );
-                },
               ),
             ),
 
@@ -408,13 +402,24 @@ class _HomeViewState extends State<HomeView> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         ListTile(
-                          leading: const Icon(Icons.rate_review_outlined, color: AppColors.primary),
-                          title: const Text('Encuesta de Usabilidad (SUS)'),
-                          subtitle: const Text('Completar evaluación para el estudio de tesis'),
+                          leading: const Icon(Icons.confirmation_number_outlined, color: AppColors.primary),
+                          title: const Text('Mis Boletos y Compras'),
+                          subtitle: const Text('Historial y códigos QR de tus entradas'),
                           onTap: () {
                             Navigator.of(ctx).pop();
                             Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const SusSurveyView()),
+                              MaterialPageRoute(builder: (_) => const PurchaseHistoryView()),
+                            );
+                          },
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.science_outlined, color: AppColors.primary),
+                          title: const Text('Panel de Investigador IHC'),
+                          subtitle: const Text('Configurar sujeto, pre-test y métricas de tesis'),
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const ThesisPanelView()),
                             );
                           },
                         ),

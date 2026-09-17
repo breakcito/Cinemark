@@ -47,10 +47,9 @@ class _ShowtimesViewState extends State<ShowtimesView> {
     _selectedDate = _dates.first;
     _session.selectDate(_selectedDate);
 
-    // Iniciar temporizador de compra al entrar a horarios (Heurística #1: Visibilidad del estado)
-    if (!_session.isTimerRunning) {
-      _session.startTimer();
-    }
+    // El cronómetro de compra NO corre mientras se revisan horarios;
+    // solo partirá desde que el usuario elija un horario específico.
+    _session.stopTimer();
   }
 
   void _openCinemaSelector() {
@@ -169,13 +168,11 @@ class _ShowtimesViewState extends State<ShowtimesView> {
                               onPressed: () => Navigator.pop(context),
                             ),
                           ),
-                          // Temporizador visible activo (Heurística Nielsen #1)
+                          // Duración oficial de la película (el cronómetro de compra inicia al elegir función)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: _session.isTimerCritical
-                                  ? AppColors.timerUrgent
-                                  : Colors.white,
+                              color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
@@ -187,22 +184,18 @@ class _ShowtimesViewState extends State<ShowtimesView> {
                             ),
                             child: Row(
                               children: [
-                                Icon(
+                                const Icon(
                                   Icons.timer_outlined,
                                   size: 16,
-                                  color: _session.isTimerCritical
-                                      ? Colors.white
-                                      : AppColors.primary,
+                                  color: AppColors.primary,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  _session.formattedTimeRemaining,
-                                  style: TextStyle(
+                                  widget.movie.duration,
+                                  style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.bold,
-                                    color: _session.isTimerCritical
-                                        ? Colors.white
-                                        : AppColors.textPrimary,
+                                    color: AppColors.textPrimary,
                                   ),
                                 ),
                               ],

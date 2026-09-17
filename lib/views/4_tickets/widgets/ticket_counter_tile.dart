@@ -124,12 +124,17 @@ class TicketCounterTile extends StatelessWidget {
                 Container(
                   constraints: const BoxConstraints(minWidth: 28),
                   alignment: Alignment.center,
-                  child: Text(
-                    '$quantity',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                    child: Text(
+                      '$quantity',
+                      key: ValueKey<int>(quantity),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ),

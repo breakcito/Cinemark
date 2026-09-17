@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/telemetry/telemetry_tracker.dart';
 import 'cinema_model.dart';
+import 'concession_model.dart';
 import 'movie_model.dart';
 import 'showtime_model.dart';
 import 'ticket_model.dart';
@@ -23,6 +24,13 @@ class PurchaseSession extends ChangeNotifier {
   // Tickets canjeados por cupones (Batch Vouchers)
   final List<RedeemedCouponTicket> _redeemedTickets = [];
 
+  // Asientos seleccionados (Vista 5)
+  final List<String> _selectedSeats = [];
+
+  // Confitería seleccionada (Vista 6)
+  final Map<String, int> _concessionQuantities = {};
+  bool _isClubMember = false;
+
   // Temporizador de sesión
   Timer? _sessionTimer;
   int _remainingSeconds = AppConstants.sessionDurationSeconds;
@@ -37,6 +45,10 @@ class PurchaseSession extends ChangeNotifier {
   Map<String, int> get ticketQuantities => Map.unmodifiable(_ticketQuantities);
   List<RedeemedCouponTicket> get redeemedTickets =>
       List.unmodifiable(_redeemedTickets);
+  List<String> get selectedSeats => List.unmodifiable(_selectedSeats);
+  Map<String, int> get concessionQuantities =>
+      Map.unmodifiable(_concessionQuantities);
+  bool get isClubMember => _isClubMember;
 
   int get remainingSeconds => _remainingSeconds;
   bool get isTimerRunning => _isTimerRunning;
@@ -134,6 +146,79 @@ class PurchaseSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Métodos de Asientos (Vista 5)
+  bool toggleSeat(String seatId, {required int maxAllowed}) {
+    if (_selectedSeats.contains(seatId)) {
+      _selectedSeats.remove(seatId);
+      notifyListeners();
+      return true;
+    }
+
+    if (_selectedSeats.length >= maxAllowed) {
+      TelemetryTracker().recordError(
+        'Seats',
+        'Límite Asientos Excedido',
+        'El usuario intentó seleccionar más de $maxAllowed asientos.',
+      );
+      return false;
+    }
+
+    _selectedSeats.add(seatId);
+    notifyListeners();
+    return true;
+  }
+
+  void clearSeats() {
+    _selectedSeats.clear();
+    notifyListeners();
+  }
+
+  // Métodos de Confitería (Vista 6)
+  void setClubMember(bool val) {
+    _isClubMember = val;
+    notifyListeners();
+  }
+
+  void updateConcessionQuantity(String itemId, int delta) {
+    final current = _concessionQuantities[itemId] ?? 0;
+    final newCount = current + delta;
+    if (newCount <= 0) {
+      _concessionQuantities.remove(itemId);
+    } else {
+      _concessionQuantities[itemId] = newCount;
+    }
+    notifyListeners();
+  }
+
+  void clearConcessions() {
+    _concessionQuantities.clear();
+    notifyListeners();
+  }
+
+  int get totalConcessionItemsCount {
+    return _concessionQuantities.values.fold(0, (sum, count) => sum + count);
+  }
+
+  double calculateConcessionsTotal(List<ConcessionItem> items) {
+    double total = 0.0;
+    _concessionQuantities.forEach((itemId, qty) {
+      final item = items.firstWhere(
+        (i) => i.id == itemId,
+        orElse: () => const ConcessionItem(
+          id: '',
+          name: '',
+          description: '',
+          price: 0,
+          memberPrice: 0,
+          category: '',
+          iconEmoji: '',
+        ),
+      );
+      total += item.getDiscountedPrice(_isClubMember) * qty;
+    });
+    return total;
+  }
+
   void startTimer({int initialSeconds = AppConstants.sessionDurationSeconds}) {
     _sessionTimer?.cancel();
     _remainingSeconds = initialSeconds;
@@ -171,6 +256,9 @@ class PurchaseSession extends ChangeNotifier {
     _selectedShowtime = null;
     _ticketQuantities.clear();
     _redeemedTickets.clear();
+    _selectedSeats.clear();
+    _concessionQuantities.clear();
+    _isClubMember = false;
     _remainingSeconds = AppConstants.sessionDurationSeconds;
     _isSessionExpired = false;
     notifyListeners();

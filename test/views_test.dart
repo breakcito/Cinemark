@@ -6,7 +6,15 @@ import 'package:cinemark/views/1_splash/splash_view.dart';
 import 'package:cinemark/views/2_home/home_view.dart';
 import 'package:cinemark/views/3_showtimes/showtimes_view.dart';
 import 'package:cinemark/views/4_tickets/tickets_view.dart';
+import 'package:cinemark/views/5_seats/seats_view.dart';
+import 'package:cinemark/views/6_concessions/concessions_view.dart';
+import 'package:cinemark/views/7_payment/payment_view.dart';
+import 'package:cinemark/views/8_ticket_confirmation/ticket_confirmation_view.dart';
+import 'package:cinemark/views/9_history/purchase_history_view.dart';
+import 'package:cinemark/views/10_upcoming_ticket/widgets/upcoming_ticket_card.dart';
 import 'package:cinemark/views/11_survey/sus_survey_view.dart';
+import 'package:cinemark/data/models/completed_order_model.dart';
+import 'package:cinemark/data/purchase_history_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -234,7 +242,7 @@ void main() {
       // Cabecera y datos
       expect(find.text('Encuesta de Usabilidad (SUS)'), findsOneWidget);
       expect(find.text('INVESTIGACIÓN / TESIS'), findsOneWidget);
-      expect(find.text('Código de Participante'), findsOneWidget);
+      expect(find.textContaining('Participante'), findsWidgets);
 
       // Debe contener preguntas clave
       expect(find.text('Me gustaría usar esta aplicación de cine con frecuencia.'), findsOneWidget);
@@ -245,6 +253,276 @@ void main() {
 
       // Puntaje calculado visible (inicialmente preconfigurado en 97.5 o > 85 pts)
       expect(find.textContaining('pts'), findsWidgets);
+    });
+  });
+
+  group('7. Vista de Asientos (SeatsView)', () {
+    testWidgets('Renderiza pantalla, controles de zoom, leyenda y permite seleccionar butacas',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final movie = MockData.getMovies().first;
+      final showtime = movie.showtimes.first;
+      PurchaseSession().updateTicketQuantity('t-general-2d', 2);
+
+      await tester.pumpWidget(
+        MaterialApp(home: SeatsView(movie: movie, showtime: showtime)),
+      );
+      await tester.pumpAndSettle();
+
+      // Cabecera y representación del mundo real
+      expect(find.text('Elige tus Asientos'), findsOneWidget);
+      expect(find.text('PANTALLA'), findsOneWidget);
+
+      // Leyenda (Heurística #6)
+      expect(find.text('Disponible'), findsOneWidget);
+      expect(find.text('Tu selección'), findsOneWidget);
+      expect(find.text('Ocupado'), findsOneWidget);
+
+      // Controles de zoom rápido accesibles (Heurística de usabilidad explícita)
+      expect(find.byIcon(Icons.add), findsWidgets);
+      expect(find.byIcon(Icons.remove), findsOneWidget);
+      expect(find.byIcon(Icons.fullscreen_rounded), findsOneWidget);
+
+      // Estado de selección inicial
+      expect(find.text('Butacas: 0 de 2 seleccionadas'), findsOneWidget);
+      expect(find.text('SELECCIONA TUS BUTACAS'), findsOneWidget);
+
+      PurchaseSession().stopTimer();
+    });
+  });
+
+  group('8. Vista de Confitería (ConcessionsView)', () {
+    testWidgets('Muestra combos populares primero, buscador en vivo y membresía in-flow',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: ConcessionsView()),
+      );
+      await tester.pumpAndSettle();
+
+      // Título y buscador
+      expect(find.text('Snacks & Confitería'), findsOneWidget);
+      expect(find.byType(TextField), findsOneWidget);
+
+      // Combos populares priorizados primero
+      expect(find.text('Combos Populares'), findsWidgets);
+      expect(find.text('Combo 1: Dúo Clásico'), findsOneWidget);
+
+      // Banner de membresía in-flow (sin retroceder de la compra)
+      expect(find.text('¿Aún no eres socio Cinemark Club?'), findsOneWidget);
+      expect(find.byType(Switch), findsOneWidget);
+
+      // Botón claro para continuar con o sin snacks (Libertad del usuario)
+      expect(find.text('CONTINUAR SIN CONFITERÍA'), findsOneWidget);
+
+      PurchaseSession().stopTimer();
+    });
+  });
+
+  group('9. Vista de Pago (PaymentView)', () {
+    testWidgets('Renderiza auto-rellenado de datos, opciones de tarjeta y Yape, y comprobante',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final movie = MockData.getMovies().first;
+      final showtime = movie.showtimes.first;
+      final cinema = MockData.cinemas.first;
+
+      PurchaseSession().setCinema(cinema);
+      PurchaseSession().selectMovie(movie);
+      PurchaseSession().selectShowtime(showtime);
+      PurchaseSession().updateTicketQuantity('t-general-2d', 2);
+      PurchaseSession().toggleSeat('F5', maxAllowed: 2);
+      PurchaseSession().toggleSeat('F6', maxAllowed: 2);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: PaymentView()),
+      );
+      await tester.pumpAndSettle();
+
+      // Cabecera y estado
+      expect(find.text('PAGO Y CONFIRMACIÓN'), findsOneWidget);
+      expect(find.text('Datos del Comprador'), findsOneWidget);
+
+      // Métodos de pago (Tarjeta y Yape)
+      expect(find.text('Tarjeta Débito / Crédito'), findsOneWidget);
+      expect(find.text('Pagar con Yape'), findsOneWidget);
+
+      // Comprobantes
+      expect(find.text('Boleta Electrónica'), findsOneWidget);
+      expect(find.text('Factura (RUC)'), findsOneWidget);
+
+      // Botón de pago con monto total visible
+      expect(find.textContaining('PAGAR S/'), findsOneWidget);
+
+      PurchaseSession().stopTimer();
+    });
+  });
+
+  group('10. Vista de Boleto Digital (TicketConfirmationView)', () {
+    testWidgets('Renderiza estilo Boarding Pass con QR, sala, butacas y CTA de encuesta',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      final order = CompletedOrder(
+        orderCode: 'CNK-829410',
+        purchaseDate: DateTime.now(),
+        movieTitle: 'Spider-Man: Beyond the Spider-Verse',
+        moviePosterUrl: 'https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg',
+        movieClassification: 'TE+7',
+        movieDuration: '140 min',
+        cinemaName: 'Cinemark Mallplaza Trujillo',
+        cinemaAddress: 'Av. América Oeste 750',
+        showtimeDate: DateTime.now(),
+        showtimeHour: '19:20',
+        roomName: 'Sala XD 1',
+        format: 'XD 2D',
+        language: 'Doblada',
+        seats: ['F5', 'F6'],
+        tickets: [
+          const OrderTicketItem(name: 'General 2D', quantity: 2, unitPrice: 16.0),
+        ],
+        concessions: [
+          const OrderConcessionItem(name: 'Combo 1: Dúo Clásico', quantity: 1, unitPrice: 34.5),
+        ],
+        totalAmount: 66.5,
+        paymentMethod: 'Tarjeta Débito/Crédito',
+        buyerName: 'Jhon Franklin',
+        buyerDni: '72819402',
+        buyerEmail: 'jhon.franklin@gmail.com',
+        qrCodeData: 'CINEMARK-PE:ORD-CNK-829410:ROOM-XD1:SEATS-F5,F6',
+        isUpcoming: true,
+      );
+
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        MaterialApp(home: TicketConfirmationView(order: order)),
+      );
+      await tester.pumpAndSettle();
+
+      // Cabecera y éxito
+      expect(find.text('TU BOLETO DIGITAL'), findsOneWidget);
+      expect(find.text('¡Compra realizada con éxito!'), findsOneWidget);
+
+      // Butacas destacadas y código de reserva legible
+      expect(find.text('BUTACAS:'), findsOneWidget);
+      expect(find.text('F5   F6'), findsOneWidget);
+      expect(find.text('CÓDIGO DE RESERVA: CNK-829410'), findsOneWidget);
+
+      // Retiro express de dulcería
+      expect(find.text('Retiro Express en Confitería'), findsOneWidget);
+
+      // Botón para volver al inicio
+      expect(find.text('VOLVER AL INICIO'), findsOneWidget);
+    });
+  });
+
+  group('11. Vista de Historial y Próximo Boleto (Views 9 y 10)', () {
+    testWidgets('PurchaseHistoryView muestra pestañas y lista de boletos con botón de QR',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 2.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      PurchaseHistoryManager().clearHistory();
+
+      final order = CompletedOrder(
+        orderCode: 'CNK-123456',
+        purchaseDate: DateTime.now(),
+        movieTitle: 'Superman: Legacy',
+        moviePosterUrl: '',
+        movieClassification: 'TE',
+        movieDuration: '130 min',
+        cinemaName: 'Cinemark San Miguel',
+        cinemaAddress: 'Av. La Marina',
+        showtimeDate: DateTime.now(),
+        showtimeHour: '20:00',
+        roomName: 'Sala 4',
+        format: '2D',
+        language: 'Subtitulada',
+        seats: ['D3'],
+        tickets: [
+          const OrderTicketItem(name: 'General', quantity: 1, unitPrice: 15.0),
+        ],
+        concessions: [],
+        totalAmount: 15.0,
+        paymentMethod: 'Yape',
+        buyerName: 'María García',
+        buyerDni: '71829304',
+        buyerEmail: 'maria@test.com',
+        qrCodeData: 'CINEMARK-PE:TEST',
+        isUpcoming: true,
+      );
+
+      PurchaseHistoryManager().addOrder(order);
+
+      await tester.pumpWidget(
+        const MaterialApp(home: PurchaseHistoryView()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('MIS BOLETOS Y COMPRAS'), findsOneWidget);
+      expect(find.text('Próximas Funciones'), findsOneWidget);
+      expect(find.text('Compras Pasadas'), findsOneWidget);
+      expect(find.text('FUNCIÓN ACTIVA'), findsOneWidget);
+      expect(find.text('VER BOLETO QR'), findsOneWidget);
+    });
+
+    testWidgets('UpcomingTicketCard muestra botón de acceso rápido para sala y butacas',
+        (WidgetTester tester) async {
+      final order = CompletedOrder(
+        orderCode: 'CNK-999',
+        purchaseDate: DateTime.now(),
+        movieTitle: 'Avatar 3',
+        moviePosterUrl: '',
+        movieClassification: 'APT',
+        movieDuration: '190 min',
+        cinemaName: 'Cinemark Trujillo',
+        cinemaAddress: 'Mallplaza',
+        showtimeDate: DateTime.now(),
+        showtimeHour: '18:30',
+        roomName: 'Sala XD',
+        format: '3D XD',
+        language: 'Doblada',
+        seats: ['G4', 'G5'],
+        tickets: [],
+        concessions: [],
+        totalAmount: 40.0,
+        paymentMethod: 'Tarjeta',
+        buyerName: 'Test',
+        buyerDni: '12345678',
+        buyerEmail: 'test@mail.com',
+        qrCodeData: 'TEST',
+        isUpcoming: true,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: UpcomingTicketCard(order: order),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('TU PRÓXIMA FUNCIÓN (ACCESO RÁPIDO)'), findsOneWidget);
+      expect(find.text('18:30'), findsOneWidget);
+      expect(find.text('Avatar 3'), findsOneWidget);
+      expect(find.text('G4, G5'), findsOneWidget);
+      expect(find.text('MOSTRAR QR PARA ENTRAR AL CINE'), findsOneWidget);
     });
   });
 }

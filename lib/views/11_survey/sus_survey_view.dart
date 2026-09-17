@@ -6,8 +6,15 @@ import '../../core/telemetry/telemetry_api_client.dart';
 
 class SusSurveyView extends StatefulWidget {
   final String? sessionUuid;
+  final String? participantCode;
+  final String? testMode;
 
-  const SusSurveyView({super.key, this.sessionUuid});
+  const SusSurveyView({
+    super.key,
+    this.sessionUuid,
+    this.participantCode,
+    this.testMode,
+  });
 
   @override
   State<SusSurveyView> createState() => _SusSurveyViewState();
@@ -20,7 +27,7 @@ class _SusSurveyViewState extends State<SusSurveyView> {
   late final TextEditingController _participantController;
   final TextEditingController _commentsController = TextEditingController();
 
-  String _testMode = 'posttest'; // 'pretest' o 'posttest'
+  late String _testMode; // 'pretest' o 'posttest'
   bool _isSubmitting = false;
 
   // 10 respuestas de la escala SUS (inicializadas por defecto en valores balanceados)
@@ -53,12 +60,12 @@ class _SusSurveyViewState extends State<SusSurveyView> {
   @override
   void initState() {
     super.initState();
-    _participantController = TextEditingController(
-      text: _tracker.participantCode.isNotEmpty && _tracker.participantCode != 'ANONIMO'
-          ? _tracker.participantCode
-          : 'P01',
-    );
-    _testMode = _tracker.testMode;
+    final initialCode = widget.participantCode ??
+        (_tracker.participantCode.isNotEmpty && _tracker.participantCode != 'ANONIMO'
+            ? _tracker.participantCode
+            : '');
+    _participantController = TextEditingController(text: initialCode);
+    _testMode = widget.testMode ?? _tracker.testMode;
   }
 
   @override
@@ -108,7 +115,7 @@ class _SusSurveyViewState extends State<SusSurveyView> {
 
     _tracker.setParticipant(code: participant, testMode: _testMode);
 
-    final res = await _api.submitSusSurvey(
+    await _api.submitSusSurvey(
       sessionUuid: widget.sessionUuid ?? _tracker.sessionUuid,
       participantCode: participant,
       testMode: _testMode,
@@ -149,7 +156,7 @@ class _SusSurveyViewState extends State<SusSurveyView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'La respuesta fue sincronizada con la base de datos de investigación para la tesis.',
+              'Las respuestas del participante fueron registradas exitosamente.',
               style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
@@ -187,13 +194,6 @@ class _SusSurveyViewState extends State<SusSurveyView> {
                 color: _getScoreColor(score),
               ),
             ),
-            if (res == null) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Nota: No se pudo contactar a la API en vivo, los datos se conservaron localmente.',
-                style: GoogleFonts.inter(fontSize: 11, color: Colors.amber[800]),
-              ),
-            ],
           ],
         ),
         actions: [
@@ -205,7 +205,21 @@ class _SusSurveyViewState extends State<SusSurveyView> {
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
-              Navigator.of(context).pop();
+              Navigator.of(context).pop({
+                'score': score,
+                'adjective': adjective,
+                'q1': _answers[1]!,
+                'q2': _answers[2]!,
+                'q3': _answers[3]!,
+                'q4': _answers[4]!,
+                'q5': _answers[5]!,
+                'q6': _answers[6]!,
+                'q7': _answers[7]!,
+                'q8': _answers[8]!,
+                'q9': _answers[9]!,
+                'q10': _answers[10]!,
+                'comments': _commentsController.text.trim(),
+              });
             },
             child: Text(
               'Volver al Inicio',
@@ -307,7 +321,7 @@ class _SusSurveyViewState extends State<SusSurveyView> {
             ),
             const SizedBox(height: 16),
 
-            // Tarjeta de Datos del Participante y Modo
+            // Tarjeta de Participante y Modo de Evaluación
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -315,54 +329,38 @@ class _SusSurveyViewState extends State<SusSurveyView> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey[200]!),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Text(
-                    'Datos de la Muestra Experimental',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+                  CircleAvatar(
+                    backgroundColor: AppColors.primaryLight,
+                    child: const Icon(Icons.person, color: AppColors.primary),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _participantController,
-                          decoration: InputDecoration(
-                            labelText: 'Código de Participante',
-                            hintText: 'Ej. P01, P02',
-                            labelStyle: GoogleFonts.inter(fontSize: 12),
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Participante: ${_tracker.participantName.isNotEmpty ? _tracker.participantName : _participantController.text} (${_participantController.text})',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey[300]!),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            value: _testMode,
-                            items: const [
-                              DropdownMenuItem(value: 'posttest', child: Text('Post-test (Nuevo)')),
-                              DropdownMenuItem(value: 'pretest', child: Text('Pre-test (Actual)')),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) setState(() => _testMode = val);
-                            },
+                        const SizedBox(height: 2),
+                        Text(
+                          _testMode == 'posttest'
+                              ? 'Evaluación: Post-test (Prototipo Cinemark)'
+                              : 'Evaluación: Pre-test (App Oficial)',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

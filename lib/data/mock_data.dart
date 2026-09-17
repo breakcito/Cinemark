@@ -1,5 +1,7 @@
 import 'models/cinema_model.dart';
+import 'models/concession_model.dart';
 import 'models/movie_model.dart';
+import 'models/seat_model.dart';
 import 'models/showtime_model.dart';
 import 'models/ticket_model.dart';
 
@@ -537,5 +539,167 @@ class MockData {
     }
 
     return null;
+  }
+
+  static List<Seat> generateSeats(String showtimeId) {
+    final rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    const cols = 12;
+
+    // Asientos ocupados predefinidos para realismo
+    final occupiedSet = {
+      'C5', 'C6', 'C7',
+      'D5', 'D6', 'D7', 'D8',
+      'E4', 'E5', 'E6', 'E7',
+      'F7', 'F8',
+      'G9', 'G10',
+    };
+
+    final List<Seat> seats = [];
+    for (final row in rows) {
+      for (int col = 1; col <= cols; col++) {
+        final id = '$row$col';
+        SeatStatus status;
+
+        if (row == 'H' && (col == 1 || col == 2)) {
+          status = SeatStatus.wheelchair;
+        } else if (occupiedSet.contains(id)) {
+          status = SeatStatus.occupied;
+        } else {
+          status = SeatStatus.available;
+        }
+
+        seats.add(Seat(id: id, row: row, number: col, status: status));
+      }
+    }
+    return seats;
+  }
+
+  static List<ConcessionItem> getConcessionItems() {
+    return [
+      // Combos Populares (Priorizados primero según heurísticas y observación)
+      const ConcessionItem(
+        id: 'c-combo-duo',
+        name: 'Combo 1: Dúo Clásico',
+        description: '1 Canchita Gigante + 2 Bebidas Grandes 32oz.',
+        price: 38.00,
+        memberPrice: 31.00,
+        category: 'Combos Populares',
+        iconEmoji: '🍿🥤',
+        isPopular: true,
+        savings: 7.00,
+      ),
+      const ConcessionItem(
+        id: 'c-combo-mega',
+        name: 'Combo 2: Mega Familiar',
+        description: '2 Canchitas Medianas + 4 Bebidas Medianas + 1 Hot Dog.',
+        price: 56.00,
+        memberPrice: 46.00,
+        category: 'Combos Populares',
+        iconEmoji: '🍿🌭',
+        isPopular: true,
+        savings: 10.00,
+      ),
+      const ConcessionItem(
+        id: 'c-combo-personal',
+        name: 'Combo 3: Personal Solo',
+        description: '1 Canchita Mediana + 1 Bebida Mediana 22oz.',
+        price: 22.00,
+        memberPrice: 18.00,
+        category: 'Combos Populares',
+        iconEmoji: '🍿',
+        isPopular: true,
+        savings: 4.00,
+      ),
+
+      // Canchita (Popcorn)
+      const ConcessionItem(
+        id: 'c-canchita-salada',
+        name: 'Canchita Gigante Salada',
+        description: 'Balde grande de maíz recién reventado con mantequilla.',
+        price: 19.50,
+        memberPrice: 16.00,
+        category: 'Canchita',
+        iconEmoji: '🍿',
+        savings: 3.50,
+      ),
+      const ConcessionItem(
+        id: 'c-canchita-dulce',
+        name: 'Canchita Gigante Dulce / Mixta',
+        description: 'Canchita bañada en caramelo artesanal y toque salado.',
+        price: 21.50,
+        memberPrice: 17.50,
+        category: 'Canchita',
+        iconEmoji: '🍿',
+        savings: 4.00,
+      ),
+      const ConcessionItem(
+        id: 'c-canchita-mediana',
+        name: 'Canchita Mediana Salada',
+        description: 'Porción clásica individual.',
+        price: 15.00,
+        memberPrice: 12.50,
+        category: 'Canchita',
+        iconEmoji: '🍿',
+      ),
+
+      // Bebidas
+      const ConcessionItem(
+        id: 'c-gaseosa-grande',
+        name: 'Gaseosa Grande 32oz',
+        description: 'Coca Cola, Coca Cola Zero, Fanta o Sprite.',
+        price: 12.00,
+        memberPrice: 10.00,
+        category: 'Bebidas',
+        iconEmoji: '🥤',
+      ),
+      const ConcessionItem(
+        id: 'c-fuzetea',
+        name: 'Fuzetea Durazno 500ml',
+        description: 'Té helado con sabor a durazno.',
+        price: 8.00,
+        memberPrice: 6.50,
+        category: 'Bebidas',
+        iconEmoji: '🧃',
+      ),
+      const ConcessionItem(
+        id: 'c-agua-sanluis',
+        name: 'Agua San Luis 625ml',
+        description: 'Agua de mesa sin gas purificada.',
+        price: 6.50,
+        memberPrice: 5.50,
+        category: 'Bebidas',
+        iconEmoji: '💧',
+      ),
+
+      // Dulces & Snacks
+      const ConcessionItem(
+        id: 'c-nachos-queso',
+        name: 'Nachos con Queso Cheddar Caliente',
+        description: 'Tortillas de maíz tostadas con porción de queso caliente.',
+        price: 16.00,
+        memberPrice: 13.50,
+        category: 'Dulces & Snacks',
+        iconEmoji: '🧀',
+        isPopular: true,
+      ),
+      const ConcessionItem(
+        id: 'c-hot-dog',
+        name: 'Hot Dog Clásico Cinemark',
+        description: 'Salchicha parrillera con pan suave y salsas al gusto.',
+        price: 11.50,
+        memberPrice: 9.50,
+        category: 'Dulces & Snacks',
+        iconEmoji: '🌭',
+      ),
+      const ConcessionItem(
+        id: 'c-mym',
+        name: "M&M's Chocolate con Leche 45g",
+        description: 'Grageas de chocolate con cubierta dulce crocante.',
+        price: 7.00,
+        memberPrice: 6.00,
+        category: 'Dulces & Snacks',
+        iconEmoji: '🍫',
+      ),
+    ];
   }
 }
