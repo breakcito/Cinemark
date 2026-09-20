@@ -550,7 +550,7 @@ class _SeatsViewState extends State<SeatsView> {
       );
     } else {
       bgColor = Colors.white;
-      borderColor = Colors.grey[350]!;
+      borderColor = Colors.grey.shade300;
       textColor = AppColors.textPrimary;
       innerWidget = FittedBox(
         fit: BoxFit.scaleDown,

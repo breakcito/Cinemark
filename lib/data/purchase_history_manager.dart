@@ -11,11 +11,25 @@ class PurchaseHistoryManager extends ChangeNotifier {
 
   List<CompletedOrder> get orders => List.unmodifiable(_orders);
 
-  List<CompletedOrder> get upcomingOrders =>
-      _orders.where((o) => o.isUpcoming).toList();
+  List<CompletedOrder> get upcomingOrders {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return _orders
+        .where((o) => o.showtimeDate.isAfter(today) ||
+            _isSameDay(o.showtimeDate, today))
+        .toList()
+      ..sort((a, b) => a.showtimeDate.compareTo(b.showtimeDate));
+  }
 
-  List<CompletedOrder> get pastOrders =>
-      _orders.where((o) => !o.isUpcoming).toList();
+  List<CompletedOrder> get pastOrders {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return _orders.where((o) => o.showtimeDate.isBefore(today)).toList()
+      ..sort((a, b) => b.showtimeDate.compareTo(a.showtimeDate));
+  }
+
+  static bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   CompletedOrder? get nextUpcomingOrder {
     final upcoming = upcomingOrders;

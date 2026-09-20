@@ -5,15 +5,24 @@ import '../../core/telemetry/telemetry_tracker.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/models/completed_order_model.dart';
 import '../2_home/home_view.dart';
+import '../9_history/purchase_history_view.dart';
+import '../11_survey/sus_survey_view.dart';
 
-class TicketConfirmationView extends StatelessWidget {
+class TicketConfirmationView extends StatefulWidget {
   final CompletedOrder order;
+  final bool showSurveyOnLoad;
 
   const TicketConfirmationView({
     super.key,
     required this.order,
+    this.showSurveyOnLoad = true,
   });
 
+  @override
+  State<TicketConfirmationView> createState() => _TicketConfirmationViewState();
+}
+
+class _TicketConfirmationViewState extends State<TicketConfirmationView> {
   String _formatDate(DateTime date) {
     const weekdays = [
       'Lunes',
@@ -44,10 +53,84 @@ class TicketConfirmationView extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
     TelemetryTracker().startStep('TicketConfirmation');
 
-    final formattedDate = _formatDate(order.showtimeDate);
+    if (widget.showSurveyOnLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showSurveyPrompt();
+      });
+    }
+  }
+
+  void _showSurveyPrompt() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.rate_review_outlined,
+                  color: AppColors.primary, size: 24),
+              const SizedBox(width: 8),
+              Text(
+                'Califica tu experiencia',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          content: Text(
+            'Nos ayuda mucho saber cómo te fue con la compra de tus entradas. '
+            'Toma solo 1 minuto con 10 preguntas rápidas (SUS).',
+            style: GoogleFonts.inter(fontSize: 13, color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                'Más tarde',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => SusSurveyView(
+                       sessionUuid: widget.order.orderCode,
+                      participantCode: TelemetryTracker().participantCode,
+                      testMode: TelemetryTracker().testMode,
+                    ),
+                  ),
+                );
+              },
+              child: Text(
+                'Sí, ahora',
+                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final formattedDate = _formatDate(widget.order.showtimeDate);
 
     return PopScope(
       canPop: false,
@@ -104,7 +187,7 @@ class TicketConfirmationView extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Comprobante enviado a ${order.buyerEmail}',
+                          'Comprobante enviado a ${widget.order.buyerEmail}',
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF047857),
@@ -124,28 +207,53 @@ class TicketConfirmationView extends StatelessWidget {
             _buildBoardingPassTicket(context, formattedDate),
             const SizedBox(height: 16),
 
-            // Botón para volver al Inicio
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _goToHome(context),
-                icon: const Icon(Icons.home_outlined, size: 18),
-                label: const Text(
-                  'VOLVER AL INICIO',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
+            // Botones de acción: ver otras compras (secundario) + volver al inicio (primario)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _goToHistory(context),
+                    icon: const Icon(Icons.confirmation_number_outlined, size: 18),
+                    label: const Text(
+                      'OTRAS COMPRAS',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      side: const BorderSide(color: AppColors.primary, width: 1.4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _goToHome(context),
+                    icon: const Icon(Icons.home_outlined, size: 18),
+                    label: const Text(
+                      'VOLVER AL INICIO',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 20),
           ],
@@ -159,6 +267,13 @@ class TicketConfirmationView extends StatelessWidget {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const HomeView()),
       (route) => false,
+    );
+  }
+
+  void _goToHistory(BuildContext context) {
+    TelemetryTracker().completeStep('TicketConfirmation');
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const PurchaseHistoryView()),
     );
   }
 
@@ -187,7 +302,7 @@ class TicketConfirmationView extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    order.moviePosterUrl,
+                    widget.order.moviePosterUrl,
                     width: 65,
                     height: 92,
                     fit: BoxFit.cover,
@@ -205,7 +320,7 @@ class TicketConfirmationView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        order.movieTitle,
+                        widget.order.movieTitle,
                         style: GoogleFonts.montserrat(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -226,7 +341,7 @@ class TicketConfirmationView extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              order.format,
+                              widget.order.format,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -241,7 +356,7 @@ class TicketConfirmationView extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              order.language,
+                              widget.order.language,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -250,7 +365,7 @@ class TicketConfirmationView extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            order.movieDuration,
+                            widget.order.movieDuration,
                             style: const TextStyle(
                               fontSize: 11,
                               color: AppColors.textSecondary,
@@ -265,7 +380,7 @@ class TicketConfirmationView extends StatelessWidget {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              order.cinemaName,
+                              widget.order.cinemaName,
                               style: const TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -311,7 +426,7 @@ class TicketConfirmationView extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        order.roomName,
+                        widget.order.roomName,
                         style: GoogleFonts.montserrat(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
@@ -348,16 +463,35 @@ class TicketConfirmationView extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        order.seats.join('   '),
-                        style: GoogleFonts.montserrat(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFFFBBF24), // Dorado brillante
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: widget.order.seats.map((seat) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBBF24).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: const Color(0xFFFBBF24).withValues(alpha: 0.5),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              seat,
+                              style: GoogleFonts.montserrat(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFFFBBF24),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          );
+                        }).toList(),
                       ),
                     ],
                   ),
@@ -392,7 +526,7 @@ class TicketConfirmationView extends StatelessWidget {
                     const Icon(Icons.access_time, size: 14, color: AppColors.primary),
                     const SizedBox(width: 4),
                     Text(
-                      order.showtimeHour,
+                      widget.order.showtimeHour,
                       style: GoogleFonts.montserrat(
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -425,7 +559,7 @@ class TicketConfirmationView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                ...order.tickets.map(
+                ...widget.order.tickets.map(
                   (t) => Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Row(
@@ -448,7 +582,7 @@ class TicketConfirmationView extends StatelessWidget {
           ),
 
           // 6. Desglose de CONFITERÍA (si aplica)
-          if (order.concessions.isNotEmpty) ...[
+          if (widget.order.concessions.isNotEmpty) ...[
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 14),
               padding: const EdgeInsets.all(10),
@@ -476,7 +610,7 @@ class TicketConfirmationView extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  ...order.concessions.map(
+                  ...widget.order.concessions.map(
                     (c) => Padding(
                       padding: const EdgeInsets.only(bottom: 2),
                       child: Row(
@@ -522,7 +656,7 @@ class TicketConfirmationView extends StatelessWidget {
                 border: Border.all(color: Colors.grey.shade200, width: 1.5),
               ),
               child: QrImageView(
-                data: order.qrCodeData,
+                data: widget.order.qrCodeData,
                 version: QrVersions.auto,
                 size: 155.0,
                 eyeStyle: const QrEyeStyle(
@@ -539,7 +673,7 @@ class TicketConfirmationView extends StatelessWidget {
           const SizedBox(height: 6),
 
           Text(
-            'CÓDIGO DE RESERVA: ${order.orderCode}',
+            'CÓDIGO DE RESERVA: ${widget.order.orderCode}',
             textAlign: TextAlign.center,
             style: GoogleFonts.montserrat(
               fontSize: 14,
@@ -567,14 +701,14 @@ class TicketConfirmationView extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Pago: ${order.paymentMethod}',
+                    'Pago: ${widget.order.paymentMethod}',
                     style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
-                  'Total Pagado: S/ ${order.totalAmount.toStringAsFixed(2)}',
+                  'Total Pagado: S/ ${widget.order.totalAmount.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,

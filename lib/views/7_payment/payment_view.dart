@@ -443,34 +443,40 @@ class _PaymentViewState extends State<PaymentView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Asientos
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Butacas seleccionadas:',
-                            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                          ),
-                          Container(
+                      const Text(
+                        'Butacas seleccionadas:',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: _purchaseSession.selectedSeats.map((seat) {
+                          return Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
-                              vertical: 2,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.25),
+                                width: 0.8,
+                              ),
                             ),
                             child: Text(
-                              _purchaseSession.selectedSeats.join(', '),
+                              seat,
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.primary,
                               ),
                             ),
-                          ),
-                        ],
+                          );
+                        }).toList(),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
 
                       // Desglose de entradas
                       Row(
