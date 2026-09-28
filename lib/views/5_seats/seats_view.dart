@@ -31,18 +31,12 @@ class _SeatsViewState extends State<SeatsView> {
       TransformationController();
 
   late List<Seat> _seats;
-  double _currentScale = 1.0;
 
   @override
   void initState() {
     super.initState();
     TelemetryTracker().startStep('Seats');
     _seats = MockData.generateSeats(widget.showtime.id);
-
-    // Ajustar zoom inicial centrado
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _zoomReset();
-    });
   }
 
   @override
@@ -52,28 +46,46 @@ class _SeatsViewState extends State<SeatsView> {
   }
 
   void _zoomIn() {
-    setState(() {
-      _currentScale = (_currentScale + 0.35).clamp(0.8, 3.5);
-      _applyScale(_currentScale);
-    });
+    _zoomBy(0.4);
   }
 
   void _zoomOut() {
-    setState(() {
-      _currentScale = (_currentScale - 0.35).clamp(0.8, 3.5);
-      _applyScale(_currentScale);
-    });
+    _zoomBy(-0.4);
   }
 
   void _zoomReset() {
     setState(() {
-      _currentScale = 1.0;
       _transformController.value = Matrix4.identity();
     });
   }
 
-  void _applyScale(double scale) {
-    _transformController.value = Matrix4.diagonal3Values(scale, scale, 1.0);
+  void _zoomBy(double delta) {
+    final currentScale = _transformController.value.getMaxScaleOnAxis();
+    final targetScale = (currentScale + delta).clamp(1.0, 3.5);
+    if ((targetScale - currentScale).abs() < 0.01) return;
+
+    if (targetScale <= 1.05) {
+      _zoomReset();
+      return;
+    }
+
+    final renderBox = context.findRenderObject() as RenderBox?;
+    final size = renderBox?.size ?? const Size(390, 600);
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final tx = _transformController.value.storage[12];
+    final ty = _transformController.value.storage[13];
+
+    final sceneX = (cx - tx) / currentScale;
+    final sceneY = (cy - ty) / currentScale;
+
+    final newTx = cx - sceneX * targetScale;
+    final newTy = cy - sceneY * targetScale;
+
+    // ignore: deprecated_member_use
+    _transformController.value = Matrix4.identity()
+      ..translate(newTx, newTy)
+      ..scale(targetScale);
   }
 
   void _onSeatTapped(Seat seat) {
@@ -313,30 +325,29 @@ class _SeatsViewState extends State<SeatsView> {
                     children: [
                       InteractiveViewer(
                         transformationController: _transformController,
-                        minScale: 0.8,
+                        minScale: 1.0,
                         maxScale: 3.5,
                         constrained: true,
-                        clipBehavior: Clip.none,
+                        clipBehavior: Clip.hardEdge,
                         boundaryMargin: const EdgeInsets.symmetric(
-                          horizontal: 140,
-                          vertical: 140,
+                          horizontal: 40,
+                          vertical: 40,
                         ),
                         child: Center(
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            physics: const NeverScrollableScrollPhysics(),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 24,
-                              ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 20,
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   // Representación visual de la Pantalla del cine
                                   _buildScreenWidget(),
-                                  const SizedBox(height: 30),
+                                  const SizedBox(height: 24),
 
                                   // Matriz de Asientos
                                   _buildSeatMatrix(),
@@ -405,7 +416,7 @@ class _SeatsViewState extends State<SeatsView> {
     return Column(
       children: [
         CustomPaint(
-          size: const Size(280, 20),
+          size: const Size(340, 22),
           painter: _ScreenCurvePainter(),
         ),
         const SizedBox(height: 6),

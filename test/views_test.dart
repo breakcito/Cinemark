@@ -286,9 +286,9 @@ void main() {
       expect(find.byIcon(Icons.remove), findsOneWidget);
       expect(find.byIcon(Icons.fullscreen_rounded), findsOneWidget);
 
-      // Estado de selección inicial
-      expect(find.text('Butacas: 0 de 2 seleccionadas'), findsOneWidget);
-      expect(find.text('SELECCIONA TUS BUTACAS'), findsOneWidget);
+      // Butacas de los extremos (A1 y A12 en el lateral derecho)
+      expect(find.text('A1'), findsOneWidget);
+      expect(find.text('A12'), findsOneWidget);
 
       PurchaseSession().stopTimer();
     });

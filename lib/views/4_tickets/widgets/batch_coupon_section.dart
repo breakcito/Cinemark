@@ -150,22 +150,22 @@ class _BatchCouponSectionState extends State<BatchCouponSection> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.bolt, size: 16, color: Colors.amber),
-                        SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            'Códigos de prueba rápida para evaluación:',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // const Row(
+                    //   children: [
+                    //     Icon(Icons.bolt, size: 16, color: Colors.amber),
+                    //     SizedBox(width: 6),
+                    //     Expanded(
+                    //       child: Text(
+                    //         'Códigos de prueba rápida para evaluación:',
+                    //         style: TextStyle(
+                    //           fontSize: 11,
+                    //           fontWeight: FontWeight.bold,
+                    //           color: AppColors.textPrimary,
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
